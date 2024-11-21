@@ -1,44 +1,53 @@
 import { useState, useEffect } from "react";
+import cx from "classnames";
 
-const Alert = (props) => {
-  const [isVisible, setIsVisible] = useState(true);
-  const [fadeClass, setFadeClass] = useState("fade-in");
+export const useShowLinkCopied = (visibilityTime = 5000) => {
+  const [showNotification, setShowNotification] = useState(false);
+  const [visible, setVisible] = useState(false);
+  const [exiting, setExiting] = useState(false);
 
-  useEffect(() => {
-    if (props.isActive) {
-      setIsVisible(true);
-      setFadeClass("fade-in active");
-      const timeoutId = setTimeout(() => {
-        setFadeClass("fade-out inactive");
-        setTimeout(() => setIsVisible(false), 3000);
-      }, 5000);
+  console.log({ showNotification, visible, exiting, when: Date.now() });
 
-      return () => clearTimeout(timeoutId);
-    }
-  }, [props.isActive]);
+  const onCopy = async () => {
+    await navigator.clipboard.writeText(window.location.href);
+    setShowNotification(true);
+    setTimeout(() => {
+      // Begin transition to fully visible
+      setVisible(true);
 
-  return (
-    isVisible && (
-      <div
-        style={props.style}
-        className={"alert " + props.className + " p-1 " + { fadeClass }}
-        role="alert"
-      >
-        {props.message}
-      </div>
-    )
-  );
+      setTimeout(() => {
+        // Begin transition to exiting
+        setExiting(true);
+        setVisible(false);
+
+        setTimeout(() => {
+          // Hide the notification
+          setShowNotification(false);
+          setExiting(false);
+        }, 1000);
+      }, visibilityTime);
+    }, 150);
+  };
+
+  const className = cx("fade alert alert-success", {
+    visible, // 'fade visible'
+    exiting, // 'fade exiting'
+  });
+
+  return {
+    showNotification,
+    onCopy,
+    className,
+  };
 };
-export const CopiedNotification = (props) => {
+
+const Alert = ({ className, message, showNotification }) => {
+  if (!showNotification) {
+    return null;
+  }
   return (
-    <div
-      style={props.style}
-      className={`alert alert-success fade ${props.isActive ? "show" : ""} ${
-        props.className
-      } p-1`}
-      role="alert"
-    >
-      {props.message}
+    <div className={className} role="alert">
+      {message}
     </div>
   );
 };
